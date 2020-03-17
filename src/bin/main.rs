@@ -1,6 +1,6 @@
+use std::io::prelude::*;
 use std::net::TcpListener;
 use std::net::TcpStream;
-use std::io::prelude::*;
 use std::thread;
 use std::time::Duration;
 
@@ -21,7 +21,6 @@ fn main() {
     }
     println!("SHUTDOWN");
 }
-
 
 fn handle_connection(mut stream: TcpStream) {
     let mut buffer = [0; 512];

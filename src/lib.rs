@@ -1,10 +1,10 @@
-use std::thread;
 use std::sync::mpsc;
 use std::sync::Arc;
 use std::sync::Mutex;
+use std::thread;
 use std::time::Duration;
 
-pub struct ThreadPool{
+pub struct ThreadPool {
     workers: Vec<Worker>,
     sender: Option<mpsc::SyncSender<Job>>,
 }
@@ -17,20 +17,20 @@ struct Worker {
 type Job = Box<dyn FnOnce() + Send + 'static>;
 
 impl Worker {
-fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
-        let thread = thread::spawn(move || {
-                loop {
-                    let job: Job = match receiver.lock().unwrap().recv() {
-                        Ok(job) => job,
-                        Err(e) => { println!("no new messages {}", e); return }
-                    };
-                    println!("Worler {} got a job", id);
-                    job(); 
-                    thread::sleep(Duration::from_secs(10));
+    fn new(id: usize, receiver: Arc<Mutex<mpsc::Receiver<Job>>>) -> Worker {
+        let thread = thread::spawn(move || loop {
+            let job: Job = match receiver.lock().unwrap().recv() {
+                Ok(job) => job,
+                Err(e) => {
+                    println!("no new messages {}", e);
+                    return;
                 }
-            }
-        );
-        Worker{
+            };
+            println!("Worler {} got a job", id);
+            job();
+            thread::sleep(Duration::from_secs(10));
+        });
+        Worker {
             id,
             thread: Some(thread),
         }
@@ -51,16 +51,16 @@ impl ThreadPool {
             workers.push(Worker::new(id, Arc::clone(&receiver)));
         }
 
-        ThreadPool{
+        ThreadPool {
             workers,
             sender: Some(sender),
         }
     }
 
     pub fn execute<F>(&self, f: F)
-        where 
-            F: FnOnce() + Send + 'static
-    {   
+    where
+        F: FnOnce() + Send + 'static,
+    {
         let job = Box::new(f);
         if let Some(ref sender) = self.sender {
             if let Err(e) = sender.try_send(job) {
